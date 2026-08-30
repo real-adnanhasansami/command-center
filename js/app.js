@@ -2091,3 +2091,37 @@
     updateAuthUI(null);
   }
 })();
+// Events JSON Export & Import Logic
+document.getElementById('exportJsonBtn')?.addEventListener('click', () => {
+  const data = localStorage.getItem('cc_events') || localStorage.getItem('events');
+  if (!data || data === '[]') return alert('Export করার মতো কোনো ইভেন্ট নেই!');
+  
+  const blob = new Blob([data], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `events-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+});
+
+document.getElementById('importJsonBtn')?.addEventListener('click', () => {
+  document.getElementById('importJsonInput').click();
+});
+
+document.getElementById('importJsonInput')?.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    try {
+      const data = event.target.result;
+      JSON.parse(data);
+      localStorage.setItem('cc_events', data);
+      localStorage.setItem('events', data);
+      alert('ইভেন্ট ব্যাকআপ সফলভাবে Import হয়েছে!');
+      location.reload();
+    } catch (err) {
+      alert('ভুল ফাইল! সঠিক JSON ফাইল দিন।');
+    }
+  };
+  reader.readAsText(file);
+});
