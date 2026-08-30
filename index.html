@@ -398,7 +398,7 @@
     </div>
   </section>
 
-  <!-- ===== Events (Digital Event Manager) ===== -->
+<!-- ===== Events (Digital Event Manager) ===== -->
   <section class="view" id="view-events" data-view="events">
     <div class="panel-head">
       <h2>Event Manager</h2>
@@ -468,7 +468,12 @@
     <div class="panel-head" style="margin-top:22px;">
       <h2>Upcoming Schedule</h2>
       <span class="hint">Drag rows to reorder · Export as PDF below</span>
-      <button class="btn btn-ghost" id="eventsPdfBtn">⬇ Schedule PDF</button>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-ghost" id="exportJsonBtn">📤 Export JSON</button>
+        <button class="btn btn-ghost" id="importJsonBtn">📥 Import JSON</button>
+        <button class="btn btn-ghost" id="eventsPdfBtn">⬇ Schedule PDF</button>
+        <input type="file" id="importJsonInput" accept=".json" style="display:none;" />
+      </div>
     </div>
     <div class="table-container event-table-container">
       <table class="event-table">
@@ -536,6 +541,7 @@
     <p class="hint" style="margin:2px 0 14px;">Duration challenges run for a set number of days from now. Set a daily deadline time (e.g. 07:00) if the task must be done before a specific time each day — miss it and that day counts as missed.</p>
     <div class="challenge-list" id="challengeList"></div>
   </section>
+  
 
 </main>
 
