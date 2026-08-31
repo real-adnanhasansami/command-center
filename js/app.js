@@ -2124,17 +2124,33 @@ document.getElementById('importJsonInput')?.addEventListener('change', (e) => {
         parsed = JSON.parse(parsed);
       }
 
-      // Ensure proper object structure for Command Center events
-      let finalEventsObj = { active: [], history: [] };
+      let activeList = [];
+      let historyList = [];
 
       if (Array.isArray(parsed)) {
-        finalEventsObj.active = parsed;
+        activeList = parsed;
       } else if (typeof parsed === 'object' && parsed !== null) {
-        finalEventsObj.active = parsed.active || [];
-        finalEventsObj.history = parsed.history || [];
+        activeList = parsed.active || [];
+        historyList = parsed.history || [];
       }
 
-      // Save formatted JSON string into local storage
+      // 2026 সালের বর্তমান তারিখ অনুযায়ী ইভেন্ট ফিল্টার
+      const today = new Date().toISOString().split('T')[0];
+
+      activeList.forEach(item => {
+        if (item.date && item.date < today) {
+          if (!item.status) item.status = 'Completed';
+          historyList.push(item);
+        }
+      });
+
+      const validActive = activeList.filter(item => !item.date || item.date >= today);
+
+      const finalEventsObj = {
+        active: validActive,
+        history: historyList
+      };
+
       const cleanJsonString = JSON.stringify(finalEventsObj);
       localStorage.setItem('cc_events', cleanJsonString);
       localStorage.setItem('events', cleanJsonString);
@@ -2182,11 +2198,9 @@ document.addEventListener('click', (e) => {
     targetView.classList.add('active');
     targetView.style.display = 'block';
   }
-});
-// Force Render Events on View Switch
-document.addEventListener('click', (e) => {
-  const btn = e.target.closest('[data-view]');
-  if (btn && btn.getAttribute('data-view') === 'events') {
+
+  // Force Render Events on View Switch
+  if (viewTarget === 'events') {
     setTimeout(() => {
       if (typeof renderEvents === 'function') renderEvents();
       if (typeof window.loadEvents === 'function') window.loadEvents();
