@@ -2198,13 +2198,4 @@ document.addEventListener('click', (e) => {
     targetView.classList.add('active');
     targetView.style.display = 'block';
   }
-
-  // Force Render Events on View Switch
-  if (viewTarget === 'events') {
-    setTimeout(() => {
-      if (typeof renderEvents === 'function') renderEvents();
-      if (typeof window.loadEvents === 'function') window.loadEvents();
-      if (window.Store && typeof window.Store.initEvents === 'function') window.Store.initEvents();
-    }, 50);
-  }
 });
