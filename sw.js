@@ -1,5 +1,5 @@
 // Command Center service worker — cache-first app shell for full offline use.
-const CACHE_VERSION = 'cc-v8'; // bumped to v8 to clear old cache
+const CACHE_VERSION = 'cc-v8.1'; // bumped to v8 to clear old cache
 const ASSETS = [
   './',
   './index.html',
