@@ -2125,3 +2125,7 @@ document.getElementById('importJsonInput')?.addEventListener('change', (e) => {
   };
   reader.readAsText(file);
 });
+// Force Clear Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+}
