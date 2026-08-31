@@ -2116,23 +2116,31 @@ document.getElementById('importJsonInput')?.addEventListener('change', (e) => {
   const reader = new FileReader();
   reader.onload = (event) => {
     try {
-      const data = event.target.result;
-      const parsedData = JSON.parse(data);
+      let rawData = event.target.result;
+      let parsed = JSON.parse(rawData);
 
-      // 1. Save data across all possible local storage keys used in Command Center
-      const jsonString = typeof parsedData === 'string' ? parsedData : JSON.stringify(parsedData);
-      localStorage.setItem('cc_events', jsonString);
-      localStorage.setItem('events', jsonString);
-
-      // 2. Direct Sync if Store or renderEvents function exists
-      if (typeof renderEvents === 'function') {
-        renderEvents();
-      } else if (window.Store && typeof window.Store.loadEvents === 'function') {
-        window.Store.loadEvents();
+      // Double parse handling in case of double-stringified JSON
+      if (typeof parsed === 'string') {
+        parsed = JSON.parse(parsed);
       }
 
-      alert('ইভেন্ট ব্যাকআপ সফলভাবে Import হয়েছে!');
-      location.reload(); // Reloads app to reflect changes
+      // Ensure proper object structure for Command Center events
+      let finalEventsObj = { active: [], history: [] };
+
+      if (Array.isArray(parsed)) {
+        finalEventsObj.active = parsed;
+      } else if (typeof parsed === 'object' && parsed !== null) {
+        finalEventsObj.active = parsed.active || [];
+        finalEventsObj.history = parsed.history || [];
+      }
+
+      // Save formatted JSON string into local storage
+      const cleanJsonString = JSON.stringify(finalEventsObj);
+      localStorage.setItem('cc_events', cleanJsonString);
+      localStorage.setItem('events', cleanJsonString);
+
+      alert('ইভেন্ট ব্যাকআপ সফলভাবে Import হয়েছে!');
+      location.reload();
     } catch (err) {
       console.error(err);
       alert('ভুল ফাইল! সঠিক JSON ফাইল দিন।');
