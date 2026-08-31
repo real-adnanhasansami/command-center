@@ -2183,3 +2183,14 @@ document.addEventListener('click', (e) => {
     targetView.style.display = 'block';
   }
 });
+// Force Render Events on View Switch
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-view]');
+  if (btn && btn.getAttribute('data-view') === 'events') {
+    setTimeout(() => {
+      if (typeof renderEvents === 'function') renderEvents();
+      if (typeof window.loadEvents === 'function') window.loadEvents();
+      if (window.Store && typeof window.Store.initEvents === 'function') window.Store.initEvents();
+    }, 50);
+  }
+});
