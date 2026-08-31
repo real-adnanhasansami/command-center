@@ -2092,17 +2092,36 @@
   }
 })();
 // ==========================================
-// Events JSON Export & Import Logic
+// Events JSON Export & Import Logic (cc_state_v2 Fix)
 // ==========================================
 document.getElementById('exportJsonBtn')?.addEventListener('click', () => {
-  const data = localStorage.getItem('cc_events') || localStorage.getItem('events');
-  if (!data || data === '[]') return alert('Export করার মতো কোনো ইভেন্ট নেই!');
-  
-  const blob = new Blob([data], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `events-backup-${new Date().toISOString().slice(0,10)}.json`;
-  a.click();
+  try {
+    const rawState = localStorage.getItem('cc_state_v2');
+    let eventsData = null;
+
+    if (rawState) {
+      const parsedState = JSON.parse(rawState);
+      if (parsedState.events) eventsData = parsedState.events;
+    }
+
+    if (!eventsData) {
+      const rawEvents = localStorage.getItem('cc_events') || localStorage.getItem('events');
+      if (rawEvents) eventsData = JSON.parse(rawEvents);
+    }
+
+    if (!eventsData || (Array.isArray(eventsData) && eventsData.length === 0)) {
+      return alert('Export করার মতো কোনো ইভেন্ট নেই!');
+    }
+
+    const blob = new Blob([JSON.stringify(eventsData, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `events-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+  } catch (err) {
+    console.error(err);
+    alert('Export করতে সমস্যা হয়েছে!');
+  }
 });
 
 document.getElementById('importJsonBtn')?.addEventListener('click', () => {
@@ -2119,7 +2138,6 @@ document.getElementById('importJsonInput')?.addEventListener('change', (e) => {
       let rawData = event.target.result;
       let parsed = JSON.parse(rawData);
 
-      // Double parse handling in case of double-stringified JSON
       if (typeof parsed === 'string') {
         parsed = JSON.parse(parsed);
       }
@@ -2134,26 +2152,22 @@ document.getElementById('importJsonInput')?.addEventListener('change', (e) => {
         historyList = parsed.history || [];
       }
 
-      // 2026 সালের বর্তমান তারিখ অনুযায়ী ইভেন্ট ফিল্টার
-      const today = new Date().toISOString().split('T')[0];
+      const formattedEvents = { active: activeList, history: historyList };
 
-      activeList.forEach(item => {
-        if (item.date && item.date < today) {
-          if (!item.status) item.status = 'Completed';
-          historyList.push(item);
-        }
-      });
+      // 1. Save directly into cc_state_v2 (Main App Store)
+      let currentState = {};
+      const rawState = localStorage.getItem('cc_state_v2');
+      if (rawState) {
+        try { currentState = JSON.parse(rawState); } catch(e){}
+      }
 
-      const validActive = activeList.filter(item => !item.date || item.date >= today);
+      currentState.events = formattedEvents;
+      localStorage.setItem('cc_state_v2', JSON.stringify(currentState));
 
-      const finalEventsObj = {
-        active: validActive,
-        history: historyList
-      };
-
-      const cleanJsonString = JSON.stringify(finalEventsObj);
-      localStorage.setItem('cc_events', cleanJsonString);
-      localStorage.setItem('events', cleanJsonString);
+      // 2. Fallback keys
+      const jsonString = JSON.stringify(formattedEvents);
+      localStorage.setItem('cc_events', jsonString);
+      localStorage.setItem('events', jsonString);
 
       alert('ইভেন্ট ব্যাকআপ সফলভাবে Import হয়েছে!');
       location.reload();
@@ -2182,17 +2196,14 @@ document.addEventListener('click', (e) => {
   const viewTarget = btn.getAttribute('data-view');
   if (!viewTarget) return;
 
-  // Hide all sections
   document.querySelectorAll('.view').forEach(v => {
     v.classList.remove('active');
     v.style.display = 'none';
   });
 
-  // Update active state in navigation
   document.querySelectorAll('[data-view]').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
 
-  // Show target section
   const targetView = document.getElementById(`view-${viewTarget}`);
   if (targetView) {
     targetView.classList.add('active');
