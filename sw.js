@@ -1,5 +1,5 @@
 // Command Center service worker — cache-first app shell for full offline use.
-const CACHE_VERSION = 'cc-v7'; // bump this string on every release so GitHub updates actually reach installed devices
+const CACHE_VERSION = 'cc-v8'; // bumped to v8 to clear old cache
 const ASSETS = [
   './',
   './index.html',
@@ -30,6 +30,8 @@ self.addEventListener('activate', (event) => {
 // Cache-first, falling back to network, falling back to cached index for navigations.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  // Ignore chrome-extension:// and non-http/https requests to prevent Cache API errors
+  if (!event.request.url.startsWith('http')) return;
 
   event.respondWith(
     caches.match(event.request).then((cached) => {
