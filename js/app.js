@@ -2112,16 +2112,29 @@ document.getElementById('importJsonBtn')?.addEventListener('click', () => {
 document.getElementById('importJsonInput')?.addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
+
   const reader = new FileReader();
   reader.onload = (event) => {
     try {
       const data = event.target.result;
-      JSON.parse(data);
-      localStorage.setItem('cc_events', data);
-      localStorage.setItem('events', data);
-      alert('ইভেন্ট ব্যাকআপ সফলভাবে Import হয়েছে!');
-      location.reload();
+      const parsedData = JSON.parse(data);
+
+      // 1. Save data across all possible local storage keys used in Command Center
+      const jsonString = typeof parsedData === 'string' ? parsedData : JSON.stringify(parsedData);
+      localStorage.setItem('cc_events', jsonString);
+      localStorage.setItem('events', jsonString);
+
+      // 2. Direct Sync if Store or renderEvents function exists
+      if (typeof renderEvents === 'function') {
+        renderEvents();
+      } else if (window.Store && typeof window.Store.loadEvents === 'function') {
+        window.Store.loadEvents();
+      }
+
+      alert('ইভেন্ট ব্যাকআপ সফলভাবে Import হয়েছে!');
+      location.reload(); // Reloads app to reflect changes
     } catch (err) {
+      console.error(err);
       alert('ভুল ফাইল! সঠিক JSON ফাইল দিন।');
     }
   };
