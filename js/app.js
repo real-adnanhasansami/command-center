@@ -1399,6 +1399,46 @@
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   });
 
+  // Events-only backup — separate from the global ⬇/⬆, for sharing/backing up just
+  // your event schedule without exposing the rest of your data. Operates on the live
+  // `state` object (not raw localStorage), so it always matches what's on screen and
+  // goes through the normal persist()/renderEvents() pipeline like everything else.
+  document.getElementById('exportJsonBtn')?.addEventListener('click', () => {
+    if (!state.events.length && !state.eventsHistory.length) { toast('No events to export yet.'); return; }
+    const payload = { kind: 'command-center-events-backup', exportedAt: Date.now(), events: state.events, eventsHistory: state.eventsHistory };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `command-center-events-${todayKey()}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    toast('Events exported.');
+  });
+  document.getElementById('importJsonBtn')?.addEventListener('click', () => document.getElementById('importJsonInput').click());
+  document.getElementById('importJsonInput')?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        const incomingEvents = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.events) ? parsed.events : null);
+        const incomingHistory = Array.isArray(parsed.eventsHistory) ? parsed.eventsHistory : [];
+        if (!incomingEvents) { alert('That file doesn\'t look like an Events backup.'); e.target.value = ''; return; }
+        if (!confirm(`Import ${incomingEvents.length} event(s)${incomingHistory.length ? ` and ${incomingHistory.length} past record(s)` : ''}? This adds to (not replaces) your current events.`)) { e.target.value = ''; return; }
+        const existingIds = new Set([...state.events, ...state.eventsHistory].map(ev => ev.id));
+        incomingEvents.forEach(ev => { if (!existingIds.has(ev.id)) state.events.push(ev); });
+        incomingHistory.forEach(ev => { if (!existingIds.has(ev.id)) state.eventsHistory.push(ev); });
+        persist(); renderEvents();
+        toast('Events imported.');
+      } catch (err) {
+        alert('Invalid JSON file.');
+      }
+      e.target.value = '';
+    };
+    reader.readAsText(file);
+  });
+
   // ================= LEVELS (GAMIFY) =================
   function levelDeadlineMs(lvl, activatedAt) {
     if (lvl.mode === 'datetime' && lvl.deadlineAt) return lvl.deadlineAt - (activatedAt || Date.now());
@@ -2091,122 +2131,3 @@
     updateAuthUI(null);
   }
 })();
-// ==========================================
-// Events JSON Export & Import Logic (cc_state_v2 Fix)
-// ==========================================
-document.getElementById('exportJsonBtn')?.addEventListener('click', () => {
-  try {
-    const rawState = localStorage.getItem('cc_state_v2');
-    let eventsData = null;
-
-    if (rawState) {
-      const parsedState = JSON.parse(rawState);
-      if (parsedState.events) eventsData = parsedState.events;
-    }
-
-    if (!eventsData) {
-      const rawEvents = localStorage.getItem('cc_events') || localStorage.getItem('events');
-      if (rawEvents) eventsData = JSON.parse(rawEvents);
-    }
-
-    if (!eventsData || (Array.isArray(eventsData) && eventsData.length === 0)) {
-      return alert('Export করার মতো কোনো ইভেন্ট নেই!');
-    }
-
-    const blob = new Blob([JSON.stringify(eventsData, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `events-backup-${new Date().toISOString().slice(0,10)}.json`;
-    a.click();
-  } catch (err) {
-    console.error(err);
-    alert('Export করতে সমস্যা হয়েছে!');
-  }
-});
-
-document.getElementById('importJsonBtn')?.addEventListener('click', () => {
-  document.getElementById('importJsonInput').click();
-});
-
-document.getElementById('importJsonInput')?.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    try {
-      let rawData = event.target.result;
-      let parsed = JSON.parse(rawData);
-
-      if (typeof parsed === 'string') {
-        parsed = JSON.parse(parsed);
-      }
-
-      let activeList = [];
-      let historyList = [];
-
-      if (Array.isArray(parsed)) {
-        activeList = parsed;
-      } else if (typeof parsed === 'object' && parsed !== null) {
-        activeList = parsed.active || [];
-        historyList = parsed.history || [];
-      }
-
-      const formattedEvents = { active: activeList, history: historyList };
-
-      // 1. Save directly into cc_state_v2 (Main App Store)
-      let currentState = {};
-      const rawState = localStorage.getItem('cc_state_v2');
-      if (rawState) {
-        try { currentState = JSON.parse(rawState); } catch(e){}
-      }
-
-      currentState.events = formattedEvents;
-      localStorage.setItem('cc_state_v2', JSON.stringify(currentState));
-
-      // 2. Fallback keys
-      const jsonString = JSON.stringify(formattedEvents);
-      localStorage.setItem('cc_events', jsonString);
-      localStorage.setItem('events', jsonString);
-
-      alert('ইভেন্ট ব্যাকআপ সফলভাবে Import হয়েছে!');
-      location.reload();
-    } catch (err) {
-      console.error(err);
-      alert('ভুল ফাইল! সঠিক JSON ফাইল দিন।');
-    }
-  };
-  reader.readAsText(file);
-});
-
-// Force Clear Service Worker
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs => {
-    regs.forEach(reg => reg.unregister());
-  });
-}
-
-// ==========================================
-// Universal View Switcher Fix (For All Tabs)
-// ==========================================
-document.addEventListener('click', (e) => {
-  const btn = e.target.closest('[data-view]');
-  if (!btn) return;
-
-  const viewTarget = btn.getAttribute('data-view');
-  if (!viewTarget) return;
-
-  document.querySelectorAll('.view').forEach(v => {
-    v.classList.remove('active');
-    v.style.display = 'none';
-  });
-
-  document.querySelectorAll('[data-view]').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-
-  const targetView = document.getElementById(`view-${viewTarget}`);
-  if (targetView) {
-    targetView.classList.add('active');
-    targetView.style.display = 'block';
-  }
-});
