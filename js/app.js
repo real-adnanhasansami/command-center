@@ -2091,7 +2091,9 @@
     updateAuthUI(null);
   }
 })();
+// ==========================================
 // Events JSON Export & Import Logic
+// ==========================================
 document.getElementById('exportJsonBtn')?.addEventListener('click', () => {
   const data = localStorage.getItem('cc_events') || localStorage.getItem('events');
   if (!data || data === '[]') return alert('Export করার মতো কোনো ইভেন্ট নেই!');
@@ -2117,7 +2119,7 @@ document.getElementById('importJsonInput')?.addEventListener('change', (e) => {
       JSON.parse(data);
       localStorage.setItem('cc_events', data);
       localStorage.setItem('events', data);
-      alert('ইভেন্ট ব্যাকআপ সফলভাবে Import হয়েছে!');
+      alert('ইভেন্ট ব্যাকআপ সফলভাবে Import হয়েছে!');
       location.reload();
     } catch (err) {
       alert('ভুল ফাইল! সঠিক JSON ফাইল দিন।');
@@ -2125,9 +2127,38 @@ document.getElementById('importJsonInput')?.addEventListener('change', (e) => {
   };
   reader.readAsText(file);
 });
+
 // Force Clear Service Worker
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(regs => {
     regs.forEach(reg => reg.unregister());
   });
 }
+
+// ==========================================
+// Universal View Switcher Fix (For All Tabs)
+// ==========================================
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-view]');
+  if (!btn) return;
+
+  const viewTarget = btn.getAttribute('data-view');
+  if (!viewTarget) return;
+
+  // Hide all sections
+  document.querySelectorAll('.view').forEach(v => {
+    v.classList.remove('active');
+    v.style.display = 'none';
+  });
+
+  // Update active state in navigation
+  document.querySelectorAll('[data-view]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  // Show target section
+  const targetView = document.getElementById(`view-${viewTarget}`);
+  if (targetView) {
+    targetView.classList.add('active');
+    targetView.style.display = 'block';
+  }
+});
